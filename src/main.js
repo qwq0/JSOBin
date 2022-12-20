@@ -46,12 +46,17 @@ export class JSOBin
             retList.push(strBin);
         };
 
+        let referenceIndCount = -1;
+        let referenceIndMap = new Map();
+
         /**
          * 遍历处理对象
          * @param {object | number | string} now 
          */
         const tr = now =>
         {
+            if (!referenceIndMap.has(now))
+                referenceIndMap.set(now, ++referenceIndCount);
             let nowType = typeof (now);
             if (nowType == "number") // 数值型(整数或小数)
             {
@@ -77,14 +82,32 @@ export class JSOBin
             {
                 if (nowType == null) // null
                     retList.push(11);
+                else if (referenceIndMap.get(now) < referenceIndCount) // 需要引用的对象
+                {
+                    retList.push(14);
+                    retList.push(JSOBin.writeVint(referenceIndMap.get(now)));
+                }
                 else if (Array.isArray(now)) // 数组
                 {
                     retList.push(5);
                     now.forEach(tr);
                     retList.push(0);
                 }
-                // else if(this.classToName.has(now)) // 类(自定义类)
-                // {}
+                else if (this.classToName.has(Object.getPrototypeOf(now)?.constructor)) // 类(自定义类)
+                {
+                    retList.push(4);
+                    pushStr(this.classToName.get(Object.getPrototypeOf(now)?.constructor));
+                    let keys = Object.getOwnPropertyNames(now);
+                    retList.push(JSOBin.writeVint(keys.length));
+                    keys.forEach(key =>
+                    {
+                        if (typeof (now[key]) != "function") // 目前不处理函数
+                        {
+                            pushStr(key);
+                            tr(now[key]);
+                        }
+                    });
+                }
                 else // 对象
                 {
                     retList.push(4);
@@ -126,8 +149,16 @@ export class JSOBin
             }
             else if (nowType == "symbol") // symbol类型
             {
-                retList.push(10);
-                pushStr(now.description ? now.description : "");
+                if (referenceIndMap.get(now) < referenceIndCount) // 需要引用的symbol
+                {
+                    retList.push(14);
+                    retList.push(JSOBin.writeVint(referenceIndMap.get(now)));
+                }
+                else // 新的symbol
+                {
+                    retList.push(10);
+                    pushStr(now.description ? now.description : "");
+                }
             }
             else if (nowType == "function") // 函数
             {
@@ -246,7 +277,16 @@ export class JSOBin
                     return ret;
                 }
                 case 6: { // 类
-                    return;
+                    let className = getStr();
+                    let ret = Object.create(this.nameToClass.get(className).prototype);
+                    let childCount = getVInt();
+                    referenceIndList.push(ret);
+                    for (let i = 0; i < childCount; i++)
+                    {
+                        let key = getStr();
+                        ret[key] = tr();
+                    }
+                    return ret;
                 }
                 case 7: { // 未定义(undefined)
                     referenceIndList.push(undefined);
