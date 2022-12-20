@@ -80,7 +80,7 @@ export class JSOBin
             }
             else if (nowType == "object") // 对象 数组 类 null
             {
-                if (nowType == null) // null
+                if (now == null) // null
                     retList.push(11);
                 else if (referenceIndMap.get(now) < referenceIndCount) // 需要引用的对象
                 {

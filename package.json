@@ -12,5 +12,9 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/qwq0/JSOBin"
-    }
+    },
+    "keywords": [
+        "json",
+        "serialization"
+    ]
 }
