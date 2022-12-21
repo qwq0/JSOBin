@@ -1,6 +1,6 @@
 {
     "name": "jsobin",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "description": "",
     "main": "./src/main.js",
     "type": "module",

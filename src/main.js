@@ -1,4 +1,14 @@
 /**
+ * 自定义序列化函数
+ */
+export const serializationFunctionSymbol = Symbol("serialization function");
+/**
+ * 自定义反序列化函数
+ */
+export const deserializationFunctionSymbol = Symbol("deserialization function");
+
+
+/**
  * JSOBin操作上下文
  */
 export class JSOBin
@@ -15,12 +25,52 @@ export class JSOBin
      * 类映射
      * 类(构造函数) 到 类名字符串标识
      * @private
-     * @type {WeakMap<object, string>}
+     * @type {Map<object, string>}
      */
-    classToName = new WeakMap();
+    classToName = new Map();
+
+    /**
+     * 安全函数映射
+     * 安全函数字符串标识 到 函数
+     * @private
+     * @type {Map<string, function>}
+     */
+    nameToSFunction = new Map();
+
+    /**
+     * 安全函数映射
+     * 函数 到 安全函数字符串标识
+     * @private
+     * @type {Map<function, string>}
+     */
+    sFunctionToName = new Map();
 
     static textEncoder = new TextEncoder();
     static textDecoder = new TextDecoder("utf-8");
+
+    /**
+     * 添加类到上下文
+     * 注册标识符和类(构造器)的相互映射
+     * @param {string} identifier 类标识符
+     * @param {function} classConstructor 类的构造器
+     */
+    addClass(identifier, classConstructor)
+    {
+        this.nameToClass.set(identifier, classConstructor);
+        this.classToName.set(classConstructor, identifier);
+    }
+
+    /**
+     * 添加安全函数到上下文
+     * 允许确保安全的函数注册标识符和函数的相互映射
+     * @param {string} identifier 安全函数标识符
+     * @param {function} safetyFunction 函数
+     */
+    addSafetyFunction(identifier, safetyFunction)
+    {
+        this.nameToSFunction.set(identifier, safetyFunction);
+        this.sFunctionToName.set(safetyFunction, identifier);
+    }
 
     /**
      * 编码
@@ -97,15 +147,13 @@ export class JSOBin
                 {
                     retList.push(4);
                     pushStr(this.classToName.get(Object.getPrototypeOf(now)?.constructor));
-                    let keys = Object.getOwnPropertyNames(now);
+                    let obj = now[serializationFunctionSymbol] ? now[serializationFunctionSymbol].call(now) : now; // 处理自定义序列化函数
+                    let keys = Object.getOwnPropertyNames(obj);
                     retList.push(JSOBin.writeVint(keys.length));
                     keys.forEach(key =>
                     {
-                        if (typeof (now[key]) != "function") // 目前不处理函数
-                        {
-                            pushStr(key);
-                            tr(now[key]);
-                        }
+                        pushStr(key);
+                        tr(obj[key]);
                     });
                 }
                 else // 对象
@@ -115,11 +163,8 @@ export class JSOBin
                     retList.push(JSOBin.writeVint(keys.length));
                     keys.forEach(key =>
                     {
-                        if (typeof (now[key]) != "function") // 目前不处理函数
-                        {
-                            pushStr(key);
-                            tr(now[key]);
-                        }
+                        pushStr(key);
+                        tr(now[key]);
                     });
                 }
             }
@@ -162,7 +207,13 @@ export class JSOBin
             }
             else if (nowType == "function") // 函数
             {
-                retList.push(7); // 目前不处理函数
+                if (this.sFunctionToName.has(now)) // 安全函数
+                {
+                    retList.push(17);
+                    pushStr(this.sFunctionToName.get(now));
+                }
+                else
+                    retList.push(7); // 目前不处理其他函数
             }
             else
                 throw "JSObin(encode): The type of value that cannot be processed.";
@@ -278,15 +329,33 @@ export class JSOBin
                 }
                 case 6: { // 类
                     let className = getStr();
-                    let ret = Object.create(this.nameToClass.get(className).prototype);
-                    let childCount = getVInt();
-                    referenceIndList.push(ret);
-                    for (let i = 0; i < childCount; i++)
+                    let classConstructor = this.nameToClass.get(className);
+                    if (classConstructor == undefined)
+                        throw `JSOBin Decode: (class) "${className}" is unregistered class in the current context in the parsing jsobin`;
+                    if (classConstructor?.[deserializationFunctionSymbol]) // 存在自定义反序列化函数
                     {
-                        let key = getStr();
-                        ret[key] = tr();
+                        let dataObj = Object.create(classConstructor.prototype);
+                        let childCount = getVInt();
+                        referenceIndList.push(dataObj);
+                        for (let i = 0; i < childCount; i++)
+                        {
+                            let key = getStr();
+                            dataObj[key] = tr();
+                        }
+                        return classConstructor[deserializationFunctionSymbol](dataObj);
                     }
-                    return ret;
+                    else
+                    {
+                        let ret = Object.create(classConstructor.prototype);
+                        let childCount = getVInt();
+                        referenceIndList.push(ret);
+                        for (let i = 0; i < childCount; i++)
+                        {
+                            let key = getStr();
+                            ret[key] = tr();
+                        }
+                        return ret;
+                    }
                 }
                 case 7: { // 未定义(undefined)
                     referenceIndList.push(undefined);
@@ -334,6 +403,11 @@ export class JSOBin
                 }
                 case 16: { // 函数 目前不支持
                     throw "JSOBin Decode: Function is not supported in the current version";
+                }
+                case 17: { // 安全函数
+                    let func = this.nameToSFunction.get(getStr());
+                    referenceIndList.push(func);
+                    return func;
                 }
                 default:
                     throw "JSOBin Decode: Wrong format";
