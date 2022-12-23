@@ -13,7 +13,8 @@
 一个byte表示类型   
 + 类型对应
     + 0 结束标志   
-        + 在数组中 作为数组结束标志
+        + 在数组中 作为结束标志
+        + 在Set类中 作为结束标志
     + 1 整数
         + vint变长型整数(32位带符号整数) 小端
     + 2 小数
@@ -47,34 +48,37 @@
         编号从0开始   
         注意此值不可大于当前编号   
         当出现循环引用或重复对象时使用
-    + 15 一些js内置类 (TODO) 这些规范还在制定过程种
-        + 一个byte表示具体类型
+    + 15 一些js内置类 (部分规范还在制定中 部分规范已实现)
+        + 一个vint表示具体类型
             + 0 未定义
             + 1 Map
-                与 对象 相似
+                + 若干组值
+                    + 一个值 作为键(key)
+                    + 一个值 作为值(value)
             + 2 Set
-                与 数组 相似
+                + 若干个值
+                + 一个 0 作为结束标志
             + 10 Int8Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 11 Uint8Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 12 Int16Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 13 Uint16Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 14 Int32Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 15 Uint32Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 16 BigInt64Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 17 BigUint64Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 18 Float32Array   
-                与ArrayBuffer相同
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
             + 19 Float64Array   
-                与ArrayBuffer相同
-            + 20 ArrayBuffer
+                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+            + 20 ArrayBuffer (TODO) 这些规范还在制定过程种
                 + 一个vint表示长度(单位:字节)
                 + 指定长度个byte 表示此buffer
     + 16 函数 (reserve) 为不安全的函数保留

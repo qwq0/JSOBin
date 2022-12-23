@@ -7,6 +7,14 @@ export const serializationFunctionSymbol = Symbol("serialization function");
  */
 export const deserializationFunctionSymbol = Symbol("deserialization function");
 
+/**
+ * js内置类集合
+ */
+const jsBuiltInClassSet = new Set();
+([
+    Set,
+    Map
+]).forEach(o => { jsBuiltInClassSet.add(o); });
 
 /**
  * JSOBin操作上下文
@@ -156,6 +164,31 @@ export class JSOBin
                         tr(obj[key]);
                     });
                 }
+                else if (jsBuiltInClassSet.has(Object.getPrototypeOf(now)?.constructor)) // js内置类
+                {
+                    retList.push(15);
+                    switch (Object.getPrototypeOf(now)?.constructor)
+                    {
+                        case Map: { // Map类
+                            retList.push(JSOBin.writeVint(1));
+                            retList.push(JSOBin.writeVint((/** @type {Map} */(now)).size));
+                            (/** @type {Map} */(now)).forEach((value, key) =>
+                            {
+                                tr(key);
+                                tr(value);
+                            });
+                            break;
+                        }
+                        case Set: { // Set类
+                            retList.push(JSOBin.writeVint(2));
+                            (/** @type {Set} */(now)).forEach(tr);
+                            retList.push(0);
+                            break;
+                        }
+                        default:
+                            retList.push(7); // 不支持的js内置类类型
+                    }
+                }
                 else // 对象
                 {
                     retList.push(4);
@@ -283,13 +316,14 @@ export class JSOBin
 
         /**
          * 遍历处理对象
+         * @param {number} [presetTypeId]
          * @returns {object | number | string}
          */
-        const tr = () =>
+        const tr = (presetTypeId) =>
         {
             if (ind >= bin.length)
                 throw "JSOBin Decode: Wrong format";
-            let typeId = bin[ind++];
+            let typeId = (presetTypeId === undefined ? bin[ind++] : presetTypeId);
             switch (typeId)
             {
                 case 1: { // 变长型整数
@@ -395,11 +429,34 @@ export class JSOBin
                 case 14: { // 引用
                     let referenceInd = getVInt();
                     let ret = referenceIndList[referenceInd];
-                    referenceIndList.push(ret);
                     return ret;
                 }
                 case 15: { // js内置类
-                    throw "JSOBin Decode: JS built-in object is not supported in the current version";
+                    let builtInClassId = getVInt();
+                    switch (builtInClassId)
+                    {
+                        case 1: { // Map类
+                            let ret = new Map();
+                            let childCount = getVInt();
+                            referenceIndList.push(ret);
+                            for (let i = 0; i < childCount; i++)
+                            {
+                                let key = tr();
+                                ret.set(key, tr());
+                            }
+                            return ret;
+                        }
+                        case 2: { // Set类
+                            let ret = new Set();
+                            referenceIndList.push(ret);
+                            while (bin[ind])
+                                ret.add(tr());
+                            ind++;
+                            return ret;
+                        }
+                        default:
+                            throw "JSOBin Decode: Unsupported js built-in class type.";
+                    }
                 }
                 case 16: { // 函数 目前不支持
                     throw "JSOBin Decode: Function is not supported in the current version";

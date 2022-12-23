@@ -7,10 +7,17 @@ JSOBin是一个用于序列化javascript对象的规范和实现
         + 对整数进行变长压缩
     + 更好的支持
         + 支持 循环引用
+        + 支持 有向无环式引用
         + 支持 Bigint
+        + 支持 部分javascript内建类
+            + 支持 Map类
+            + 支持 Set类
         + 支持 自定义类
         + 支持 symbol (有限制)
         + 支持 undefined
+
+关于序列化后格式的规范 见此仓库中的 [standard.md](./standard.md)   
+
 
 ## 使用 JSOBin
 
