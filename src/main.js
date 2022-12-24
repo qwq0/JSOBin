@@ -94,13 +94,32 @@ export class JSOBin
         let retList = [];
 
         /**
+         * 序列化一个vint
+         * @param {number} num
+         */
+        const pushVint = (num) =>
+        {
+            while (true)
+            {
+                let c = (num & ((1 << 7) - 1));
+                num >>>= 7;
+                if (!num)
+                {
+                    retList.push(c | (1 << 7));
+                    return;
+                }
+                retList.push(c);
+            }
+        }
+
+        /**
          * 写入字符串
          * @param {string} str
          */
         const pushStr = str =>
         {
             let strBin = JSOBin.textEncoder.encode(str);
-            retList.push(JSOBin.writeVint(strBin.byteLength));
+            pushVint(strBin.byteLength);
             retList.push(strBin);
         };
 
@@ -113,15 +132,16 @@ export class JSOBin
          */
         const tr = now =>
         {
+            ++referenceIndCount;
             if (!referenceIndMap.has(now))
-                referenceIndMap.set(now, ++referenceIndCount);
+                referenceIndMap.set(now, referenceIndCount);
             let nowType = typeof (now);
             if (nowType == "number") // 数值型(整数或小数)
             {
                 if (Number.isInteger(now)) // 整数
                 {
                     retList.push(1);
-                    retList.push(JSOBin.writeVint(now));
+                    pushVint(now);
                 }
                 else // 浮点数
                 {
@@ -143,7 +163,7 @@ export class JSOBin
                 else if (referenceIndMap.get(now) < referenceIndCount) // 需要引用的对象
                 {
                     retList.push(14);
-                    retList.push(JSOBin.writeVint(referenceIndMap.get(now)));
+                    pushVint(referenceIndMap.get(now));
                 }
                 else if (Array.isArray(now)) // 数组
                 {
@@ -157,7 +177,7 @@ export class JSOBin
                     pushStr(this.classToName.get(Object.getPrototypeOf(now)?.constructor));
                     let obj = now[serializationFunctionSymbol] ? now[serializationFunctionSymbol].call(now) : now; // 处理自定义序列化函数
                     let keys = Object.getOwnPropertyNames(obj);
-                    retList.push(JSOBin.writeVint(keys.length));
+                    pushVint(keys.length);
                     keys.forEach(key =>
                     {
                         pushStr(key);
@@ -170,8 +190,8 @@ export class JSOBin
                     switch (Object.getPrototypeOf(now)?.constructor)
                     {
                         case Map: { // Map类
-                            retList.push(JSOBin.writeVint(1));
-                            retList.push(JSOBin.writeVint((/** @type {Map} */(now)).size));
+                            pushVint(1);
+                            pushVint((/** @type {Map} */(now)).size);
                             (/** @type {Map} */(now)).forEach((value, key) =>
                             {
                                 tr(key);
@@ -180,7 +200,7 @@ export class JSOBin
                             break;
                         }
                         case Set: { // Set类
-                            retList.push(JSOBin.writeVint(2));
+                            pushVint(2);
                             (/** @type {Set} */(now)).forEach(tr);
                             retList.push(0);
                             break;
@@ -193,7 +213,7 @@ export class JSOBin
                 {
                     retList.push(4);
                     let keys = Object.keys(now);
-                    retList.push(JSOBin.writeVint(keys.length));
+                    pushVint(keys.length);
                     keys.forEach(key =>
                     {
                         pushStr(key);
@@ -222,7 +242,7 @@ export class JSOBin
                     retList.push(13);
                     bigintBuf = JSOBin.writeBigint(-(/** @type {bigint} */(now)));
                 }
-                retList.push(JSOBin.writeVint(bigintBuf.byteLength));
+                pushVint(bigintBuf.byteLength);
                 retList.push(bigintBuf);
             }
             else if (nowType == "symbol") // symbol类型
@@ -230,7 +250,7 @@ export class JSOBin
                 if (referenceIndMap.get(now) < referenceIndCount) // 需要引用的symbol
                 {
                     retList.push(14);
-                    retList.push(JSOBin.writeVint(referenceIndMap.get(now)));
+                    pushVint(referenceIndMap.get(now));
                 }
                 else // 新的symbol
                 {
@@ -289,15 +309,24 @@ export class JSOBin
          */
         let ind = 0;
 
+
         /**
          * 读一个vint
          * @returns {number}
          */
         const getVInt = () =>
         {
-            let r = JSOBin.readVint(bin, ind);
-            ind = r.ind;
-            return r.num;
+            let ret = 0;
+            let bitPointer = 0;
+            while (!(bin[ind] & (1 << 7)))
+            {
+                ret |= bin[ind++] << bitPointer;
+                bitPointer += 7;
+                if (bitPointer > 32) // (bitPointer > 28)
+                    throw "JSOBin Decode: Unexpected vint length";
+            }
+            ret |= (bin[ind++] & ((1 << 7) - 1)) << bitPointer;
+            return ret;
         };
 
         /**
@@ -429,6 +458,7 @@ export class JSOBin
                 case 14: { // 引用
                     let referenceInd = getVInt();
                     let ret = referenceIndList[referenceInd];
+                    referenceIndList.push(ret);
                     return ret;
                 }
                 case 15: { // js内置类
@@ -473,51 +503,7 @@ export class JSOBin
         return tr();
     }
 
-    /**
-     * 序列化一个vint
-     * @param {number} num
-     * @returns {Uint8Array}
-     */
-    static writeVint(num)
-    {
-        let buf = new Uint8Array(5);
-        let ind = 0;
-        while (true)
-        {
-            buf[ind] = (num & ((1 << 7) - 1));
-            num >>>= 7;
-            if (!num)
-            {
-                buf[ind] |= (1 << 7);
-                return buf.subarray(0, ind + 1);
-            }
-            ind++;
-        }
-    }
 
-    /**
-     * 反序列化一个vint
-     * @param {Uint8Array} buf
-     * @param {number} ind
-     * @returns {{ num: number, ind: number }}
-     */
-    static readVint(buf, ind)
-    {
-        let ret = 0;
-        let bitPointer = 0;
-        while (!(buf[ind] & (1 << 7)))
-        {
-            ret |= buf[ind++] << bitPointer;
-            bitPointer += 7;
-            if (bitPointer > 32) // (bitPointer > 28)
-                throw "Unexpected vint length";
-        }
-        ret |= (buf[ind++] & ((1 << 7) - 1)) << bitPointer;
-        return ({
-            num: ret,
-            ind: ind
-        });
-    }
 
     /**
      * 序列化一个bigint
