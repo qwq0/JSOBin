@@ -16,6 +16,9 @@ const jsBuiltInClassSet = new Set();
     Map
 ]).forEach(o => { jsBuiltInClassSet.add(o); });
 
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder("utf-8");
+
 /**
  * JSOBin操作上下文
  */
@@ -52,9 +55,6 @@ export class JSOBin
      * @type {Map<function, string>}
      */
     sFunctionToName = new Map();
-
-    static textEncoder = new TextEncoder();
-    static textDecoder = new TextDecoder("utf-8");
 
     /**
      * 添加类到上下文
@@ -118,7 +118,7 @@ export class JSOBin
          */
         const pushStr = str =>
         {
-            let strBin = JSOBin.textEncoder.encode(str);
+            let strBin = textEncoder.encode(str);
             pushVint(strBin.byteLength);
             retList.push(strBin);
         };
@@ -130,7 +130,7 @@ export class JSOBin
          * 遍历处理对象
          * @param {object | number | string} now 
          */
-        const tr = now =>
+        const tr = (now) =>
         {
             ++referenceIndCount;
             if (!referenceIndMap.has(now))
@@ -173,7 +173,7 @@ export class JSOBin
                 }
                 else if (this.classToName.has(Object.getPrototypeOf(now)?.constructor)) // 类(自定义类)
                 {
-                    retList.push(4);
+                    retList.push(6);
                     pushStr(this.classToName.get(Object.getPrototypeOf(now)?.constructor));
                     let obj = now[serializationFunctionSymbol] ? now[serializationFunctionSymbol].call(now) : now; // 处理自定义序列化函数
                     let keys = Object.getOwnPropertyNames(obj);
@@ -336,7 +336,7 @@ export class JSOBin
         const getStr = () =>
         {
             let len = getVInt();
-            let str = JSOBin.textDecoder.decode(bin.subarray(ind, ind + len));
+            let str = textDecoder.decode(bin.subarray(ind, ind + len));
             ind += len;
             return str;
         };
@@ -407,7 +407,7 @@ export class JSOBin
                         }
                         return classConstructor[deserializationFunctionSymbol](dataObj);
                     }
-                    else
+                    else // 自定义类默认序列化方案
                     {
                         let ret = Object.create(classConstructor.prototype);
                         let childCount = getVInt();

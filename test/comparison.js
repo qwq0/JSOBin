@@ -2,10 +2,12 @@
 
 import { JSOBin } from "../src/main.js";
 
-(() =>
-{
-    let jsob = new JSOBin();
+let jsob = new JSOBin();
+let loopCount = 1;
 
+setInterval(() =>
+{
+    console.log(` --- loop ${loopCount++} --- `);
     let srcObj = {
         floatArray: (() =>
         {
@@ -49,8 +51,8 @@ import { JSOBin } from "../src/main.js";
     const textEncoder = new TextEncoder();
     const textDecoder = new TextDecoder("utf-8");
 
-    console.time("JSON stringify");
     console.time("JSON stringify and utf-8 encode");
+    console.time("JSON stringify");
     let json = JSON.stringify(srcObj);
     console.timeEnd("JSON stringify");
     let jsonBuf = textEncoder.encode(json);
@@ -78,4 +80,4 @@ import { JSOBin } from "../src/main.js";
     console.log("size of JSOBin:", jsobBuf.byteLength + " bytes");
 
     console.log("load", jsonStr[0], jsobBuf[0], jsonParsed["test"], jsobParsed["test"]);
-})();
+}, 1800);
