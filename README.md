@@ -13,6 +13,7 @@ JSOBin是一个用于序列化javascript对象的规范和实现
             + 支持 Map类
             + 支持 Set类
         + 支持 自定义类
+            + 支持 自定义类的序列化和反序列化函数
         + 支持 symbol (有限制)
         + 支持 undefined
 
@@ -111,7 +112,7 @@ class MyClass
         这里的数据对象就是你在上面的函数中返回的对象!
         然后 你可以返回创建的类的实例 他会被放在本来的位置上
         或者 你也可以返回和此类无关的其他类实例或对象
-        总之 返回的值将被放在这个类实例原本在jsonb中的位置上
+        总之 返回的值将被放在这个类实例原本在jsobin中的位置上
     */
     static [deserializationFunctionSymbol](dataObj)
     {

@@ -13,27 +13,21 @@ setInterval(() =>
         {
             let ret = [];
             for (let i = 0; i < 10000; i++)
-                ret.push({
-                    i: Math.random()
-                });
+                ret.push(Math.random());
             return ret;
         })(),
         integerArray: (() =>
         {
             let ret = [];
             for (let i = 0; i < 10000; i++)
-                ret.push({
-                    i: Math.floor(Math.random() * 654321)
-                });
+                ret.push(Math.floor(Math.random() * 654321));
             return ret;
         })(),
         stringArray: (() =>
         {
             let ret = [];
             for (let i = 0; i < 10000; i++)
-                ret.push({
-                    i: "str" + Math.floor(Math.random() * 1000)
-                });
+                ret.push("str" + Math.floor(Math.random() * 1000));
             return ret;
         })(),
         objectNesting: (() =>
@@ -42,6 +36,38 @@ setInterval(() =>
             for (let i = 0; i < 800; i++)
             {
                 ret = { obj: ret };
+            }
+            return ret;
+        })(),
+        arrayNesting: (() =>
+        {
+            let ret = [];
+            for (let i = 0; i < 800; i++)
+            {
+                ret = [ret];
+            }
+            return ret;
+        })(),
+        duplicateObject: (() =>
+        {
+            let ret = [];
+            let obj = {
+                i: 12345,
+                s: "string"
+            };
+            for (let i = 0; i < 1000; i++)
+            {
+                ret.push(obj);
+            }
+            return ret;
+        })(),
+        duplicateArray: (() =>
+        {
+            let ret = [];
+            let arr = [12345];
+            for (let i = 0; i < 1000; i++)
+            {
+                ret.push(arr);
             }
             return ret;
         })(),
