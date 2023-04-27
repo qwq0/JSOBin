@@ -1,7 +1,7 @@
 # JSOBin
 JSOBin是一个用于序列化javascript对象的规范和实现   
 
-+ 优点 对比json
++ 优点 对比JSON
     + 更小
         + 使用二进制格式
         + 对整数进行变长压缩
@@ -12,10 +12,14 @@ JSOBin是一个用于序列化javascript对象的规范和实现
         + 支持 部分javascript内建类
             + 支持 Map类
             + 支持 Set类
+            + 支持 ArrayBuffer类
+            + 支持 TypedArrey类
         + 支持 自定义类
             + 支持 自定义类的序列化和反序列化函数
         + 支持 symbol (有限制)
         + 支持 undefined
++ 缺点 对比JSON
+    + 人类不可读 几乎抛弃了所有可读性
 
 关于序列化后格式的规范 见此仓库中的 [standard.md](./standard.md)   
 

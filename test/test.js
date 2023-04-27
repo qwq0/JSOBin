@@ -1,6 +1,6 @@
 // 这是一个测试脚本 以确保JSOBin实现(这个库)工作正常
 
-import { deserializationFunctionSymbol, JSOBin, serializationFunctionSymbol } from "../src/main.js";
+import { deserializationFunctionSymbol, JSOBin, serializationFunctionSymbol } from "../src/index.js";
 
 
 class TestClass
@@ -48,7 +48,7 @@ class TestClassWithCustomSerializationFunction
 
 
 
-(() =>
+(async () =>
 {
     let jsob = new JSOBin();
     jsob.addClass("TestClass", TestClass);
@@ -115,6 +115,16 @@ class TestClassWithCustomSerializationFunction
                 });
                 return ret;
             })(),
+            uint8Array: new Uint8Array([1, 2, 3]),
+            int8Array: new Int8Array([4, 5, 6]),
+            uint16Array: new Uint16Array([7, 8, 9]),
+            int16Array: new Int16Array([10, 11, 12]),
+            int32Array: new Int32Array([13, 14, 15]),
+            uint32Array: new Uint32Array([16, 17, 18]),
+            bigInt64Array: new BigInt64Array([19n, 20n, 21n]),
+            bigUint64Array: new BigUint64Array([22n, 23n, 24n]),
+            float32Array: new Float32Array([25, 26, 27]),
+            float64Array: new Float64Array([28, 29, 30])
         }
     };
     srcObj.cycle = srcObj;
@@ -123,4 +133,10 @@ class TestClassWithCustomSerializationFunction
 
     let targetObj = jsob.decode(jsob.encode(srcObj));
     console.log("targetObj", targetObj);
+
+    if (!globalThis["window"])
+    {
+        let assert = await import("assert");
+        assert.deepEqual(srcObj, targetObj, "deepEqual");
+    }
 })();

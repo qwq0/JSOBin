@@ -1,6 +1,6 @@
 // 这是一个测试脚本 以比较JSOBin实现(这个库)与JSON性能以及序列化后的大小
 
-import { JSOBin } from "../src/main.js";
+import { JSOBin } from "../src/index.js";
 
 let jsob = new JSOBin();
 let loopCount = 1;

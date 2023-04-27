@@ -59,28 +59,31 @@
                 + 若干个值
                 + 一个 0 作为结束标志
             + 10 Int8Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                + 一个vint 表示在ArrayBuffer中的起始偏移量
+                + 一个vint 表示此TypedArray的长度
+                + 一个ArrayBuffer对象 表示使用的buffer
             + 11 Uint8Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 12 Int16Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 13 Uint16Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 14 Int32Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 15 Uint32Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 16 BigInt64Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 17 BigUint64Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 18 Float32Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
+                与Int8Array相同
             + 19 Float64Array   
-                与ArrayBuffer相同 (TODO) 这些规范还在制定过程种
-            + 20 ArrayBuffer (TODO) 这些规范还在制定过程种
+                与Int8Array相同
+            + 20 ArrayBuffer
                 + 一个vint表示长度(单位:字节)
                 + 指定长度个byte 表示此buffer
+                + (TODO) ! 注意 ! SharedArrayBuffer当前未被处理 可能会作为ArrayBuffer进行处理
     + 16 函数 (reserve) 为不安全的函数保留
     + 17 安全函数
         + 一个string表示此函数的标识符
