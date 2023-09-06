@@ -164,7 +164,7 @@ class Encoder
         switch (typeof (now))
         {
             case "number": { // 数值型(整数或小数)
-                if (Number.isInteger(now)) // 整数
+                if (Number.isInteger(now) && now >= -2147483648 && now <= 2147483647) // 整数
                 {
                     this.push(1);
                     this.pushVint(now);
