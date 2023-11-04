@@ -1,2 +1,2 @@
-export { JSOBin } from "./context.js";
+export { JSOBin } from "./JSOBin.js";
 export { serializationFunctionSymbol, deserializationFunctionSymbol } from "./symbols.js";

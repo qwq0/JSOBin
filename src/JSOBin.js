@@ -1,10 +1,6 @@
 import { Decoder } from "./Decoder.js";
 import { Encoder } from "./Encoder.js";
 import { State } from "./State.js";
-import { deserializationFunctionSymbol, serializationFunctionSymbol } from "./symbols.js";
-
-
-
 
 /**
  * JSOBin操作上下文
@@ -43,11 +39,17 @@ export class JSOBin
     /**
      * 编码
      * @param {object | number | string} obj
+     * @param {{
+     *  referenceString?: boolean
+     * }} [config]
      * @returns {Uint8Array}
      */
-    encode(obj)
+    encode(obj, config)
     {
-        return (new Encoder(this.#state)).encode(obj);
+        config = Object.assign({
+            referenceString: false
+        }, config);
+        return (new Encoder(this.#state, config.referenceString)).encode(obj);
     }
 
     /**

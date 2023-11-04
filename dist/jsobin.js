@@ -61,31 +61,40 @@ class Encoder
      * 缓冲区
      * @type {Uint8Array}
      */
-    buffer = new Uint8Array(128);
+    #buffer = new Uint8Array(128);
     /**
      * 缓冲区结束索引
      * 不包括该值
      * @type {number}
      */
-    endInd = 0;
+    #endInd = 0;
 
     /**
      * 引用索引计数
      * @type {number}
      */
-    referenceIndCount = -1;
+    #referenceIndCount = -1;
     /**
-     * 
+     * 引用的值 到 引用索引 映射
+     * @type {Map<any, number>}
      */
-    referenceIndMap = new Map();
+    #referenceIndMap = new Map();
+    /**
+     * 允许引用字符串
+     * 开启时对于有相同字符串的内容将降低大小
+     * @type {boolean}
+     */
+    #enableReferenceString = false;
 
 
     /**
      * @param {State} state
+     * @param {boolean} enableReferenceString
      */
-    constructor(state)
+    constructor(state, enableReferenceString)
     {
         this.#state = state;
+        this.#enableReferenceString = enableReferenceString;
     }
 
     /**
@@ -94,13 +103,13 @@ class Encoder
      */
     push(c)
     {
-        if (this.endInd >= this.buffer.length)
+        if (this.#endInd >= this.#buffer.length)
         {
-            let old = this.buffer;
-            this.buffer = new Uint8Array(this.buffer.length * 2);
-            this.buffer.set(old);
+            let old = this.#buffer;
+            this.#buffer = new Uint8Array(this.#buffer.length * 2);
+            this.#buffer.set(old);
         }
-        this.buffer[this.endInd++] = c;
+        this.#buffer[this.#endInd++] = c;
     }
 
     /**
@@ -109,17 +118,17 @@ class Encoder
      */
     pushArr(a)
     {
-        if (this.endInd + a.length > this.buffer.length)
+        if (this.#endInd + a.length > this.#buffer.length)
         {
-            let old = this.buffer;
+            let old = this.#buffer;
             let newLen = old.length * 2;
-            while (this.endInd + a.length > newLen)
+            while (this.#endInd + a.length > newLen)
                 newLen *= 2;
-            this.buffer = new Uint8Array(newLen);
-            this.buffer.set(old);
+            this.#buffer = new Uint8Array(newLen);
+            this.#buffer.set(old);
         }
-        this.buffer.set(a, this.endInd);
-        this.endInd += a.length;
+        this.#buffer.set(a, this.#endInd);
+        this.#endInd += a.length;
     }
 
     /**
@@ -158,9 +167,9 @@ class Encoder
      */
     traversal(now)
     {
-        ++this.referenceIndCount;
-        if (!this.referenceIndMap.has(now))
-            this.referenceIndMap.set(now, this.referenceIndCount);
+        ++this.#referenceIndCount;
+        if (!this.#referenceIndMap.has(now))
+            this.#referenceIndMap.set(now, this.#referenceIndCount);
         switch (typeof (now))
         {
             case "number": { // 数值型(整数或小数)
@@ -178,18 +187,31 @@ class Encoder
             }
 
             case "string": { // 字符串
-                this.push(3);
-                this.pushStr(now);
+                let refInd = 0;
+                if (
+                    this.#enableReferenceString &&
+                    now.length >= 2 &&
+                    this.#referenceIndCount > (refInd = this.#referenceIndMap.get(now))
+                ) // 引用字符串
+                {
+                    this.push(14);
+                    this.pushVint(refInd);
+                }
+                else
+                {
+                    this.push(3);
+                    this.pushStr(now);
+                }
                 break;
             }
 
             case "object": { // 对象 数组 类 null
                 if (now == null) // null
                     this.push(11);
-                else if (this.referenceIndMap.get(now) < this.referenceIndCount) // 需要引用的对象
+                else if (this.#referenceIndMap.get(now) < this.#referenceIndCount) // 需要引用的对象
                 {
                     this.push(14);
-                    this.pushVint(this.referenceIndMap.get(now));
+                    this.pushVint(this.#referenceIndMap.get(now));
                 }
                 else if (Array.isArray(now)) // 数组
                 {
@@ -266,10 +288,10 @@ class Encoder
             }
 
             case "symbol": { // symbol类型
-                if (this.referenceIndMap.get(now) < this.referenceIndCount) // 需要引用的symbol
+                if (this.#referenceIndMap.get(now) < this.#referenceIndCount) // 需要引用的symbol
                 {
                     this.push(14);
-                    this.pushVint(this.referenceIndMap.get(now));
+                    this.pushVint(this.#referenceIndMap.get(now));
                 }
                 else // 新的symbol
                 {
@@ -301,7 +323,7 @@ class Encoder
      */
     getFinalBuffer()
     {
-        return this.buffer.slice(0, this.endInd);
+        return this.#buffer.slice(0, this.#endInd);
     }
 
     /**
@@ -807,11 +829,17 @@ class JSOBin
     /**
      * 编码
      * @param {object | number | string} obj
+     * @param {{
+     *  referenceString?: boolean
+     * }} [config]
      * @returns {Uint8Array}
      */
-    encode(obj)
+    encode(obj, config)
     {
-        return (new Encoder(this.#state)).encode(obj);
+        config = Object.assign({
+            referenceString: false
+        }, config);
+        return (new Encoder(this.#state, config.referenceString)).encode(obj);
     }
 
     /**

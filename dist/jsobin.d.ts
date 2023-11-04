@@ -19,9 +19,14 @@ declare class JSOBin {
     /**
      * 编码
      * @param {object | number | string} obj
+     * @param {{
+     *  referenceString?: boolean
+     * }} [config]
      * @returns {Uint8Array}
      */
-    encode(obj: object | number | string): Uint8Array;
+    encode(obj: object | number | string, config?: {
+        referenceString?: boolean;
+    } | undefined): Uint8Array;
     /**
      * 解码
      * @param {Uint8Array} bin
