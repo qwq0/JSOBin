@@ -34,6 +34,22 @@ class State
      * @type {Map<function, string>}
      */
     safetyFunctionToName = new Map();
+
+    /**
+     * 命名的symbol映射
+     * 命名的symbol字符串标识 到 函数
+     * @package
+     * @type {Map<string, symbol>}
+     */
+    nameToNamedSymbol = new Map();
+
+    /**
+     * 命名的symbol映射
+     * 函数 到 命名的symbol字符串标识
+     * @package
+     * @type {Map<symbol, string>}
+     */
+    namedSymbolToName = new Map();
 }
 
 /**
@@ -223,7 +239,7 @@ class Encoder
                     this.push(0);
                 }
                 else if (this.#state.classToName.has(Object.getPrototypeOf(now)?.constructor)) // 类(自定义类)
-                { // TODO 类的自定义处理需要大改版 目前无法在自定义序列化下使用循环引用
+                {
                     this.push(6);
                     this.pushStr(this.#state.classToName.get(Object.getPrototypeOf(now)?.constructor));
                     let obj = now[serializationFunctionSymbol] ? now[serializationFunctionSymbol].call(now) : now; // 处理自定义序列化函数
@@ -292,6 +308,11 @@ class Encoder
                 {
                     this.push(14);
                     this.pushVint(this.#referenceIndMap.get(now));
+                }
+                else if(this.#state.namedSymbolToName.has(now)) // 命名的symbol
+                {
+                    this.push(18);
+                    this.pushStr(this.#state.namedSymbolToName.get(now));
                 }
                 else // 新的symbol
                 {
@@ -388,6 +409,8 @@ const builtInClassTypeIdMap = new Map();
         {
             let ret = new Map();
             let childCount = decoder.getVInt();
+            if (childCount < 0)
+                throw "JSOBin Decode: Wrong format";
             decoder.referenceIndList.push(ret);
             for (let i = 0; i < childCount; i++)
             {
@@ -429,9 +452,8 @@ const builtInClassTypeIdMap = new Map();
         decode: (/** @type {Decoder} */decoder) =>
         {
             let length = decoder.getVInt();
-            let ret = decoder.buffer.buffer.slice(decoder.index, decoder.index + length);
+            let ret = decoder.getArr(length).buffer;
             decoder.referenceIndList.push(ret);
-            decoder.index += length;
             return ret;
         }
     },
@@ -447,43 +469,53 @@ const builtInClassTypeIdMap = new Map();
 ([
     {
         constructor: Int8Array,
-        typeId: 10
+        typeId: 10,
+        byteFactor: 1
     },
     {
         constructor: Uint8Array,
-        typeId: 11
+        typeId: 11,
+        byteFactor: 1
     },
     {
         constructor: Int16Array,
-        typeId: 12
+        typeId: 12,
+        byteFactor: 2
     },
     {
         constructor: Uint16Array,
-        typeId: 13
+        typeId: 13,
+        byteFactor: 2
     },
     {
         constructor: Int32Array,
-        typeId: 14
+        typeId: 14,
+        byteFactor: 4
     },
     {
         constructor: Uint32Array,
-        typeId: 15
+        typeId: 15,
+        byteFactor: 4
     },
     {
         constructor: BigInt64Array,
-        typeId: 16
+        typeId: 16,
+        byteFactor: 8
     },
     {
         constructor: BigUint64Array,
-        typeId: 17
+        typeId: 17,
+        byteFactor: 8
     },
     {
         constructor: Float32Array,
-        typeId: 18
+        typeId: 18,
+        byteFactor: 4
     },
     {
         constructor: Float64Array,
-        typeId: 19
+        typeId: 19,
+        byteFactor: 8
     }
 ]).forEach(o =>
 {
@@ -506,7 +538,11 @@ const builtInClassTypeIdMap = new Map();
 
         let byteOffset = decode.getVInt();
         let length = decode.getVInt();
+        if (length < 0 || byteOffset < 0)
+            throw "JSOBin Decode: Wrong format";
         let buffer = decode.traversal();
+        if (!(buffer instanceof ArrayBuffer) || byteOffset + o.byteFactor * length > buffer.byteLength)
+            throw "JSOBin Decode: Wrong format";
 
         let ret = new o.constructor(buffer, byteOffset, length);
         decode.referenceIndList[refInd] = ret;
@@ -565,6 +601,8 @@ class Decoder
      */
     peekByte()
     {
+        if (this.index >= this.buffer.length)
+            throw "JSOBin Decode: Wrong format";
         return this.buffer[this.index];
     }
 
@@ -575,7 +613,23 @@ class Decoder
      */
     popByte()
     {
+        if (this.index >= this.buffer.length)
+            throw "JSOBin Decode: Wrong format";
         return this.buffer[this.index++];
+    }
+
+    /**
+     * 获取缓冲区中的一段
+     * @param {number} len 
+     * @returns {Uint8Array}
+     */
+    getArr(len)
+    {
+        if (len < 0 || this.index + len > this.buffer.length)
+            throw "JSOBin Decode: Wrong format";
+        let slice = this.buffer.slice(this.index, this.index + len);
+        this.index += len;
+        return slice;
     }
 
     /**
@@ -604,6 +658,8 @@ class Decoder
     getStr()
     {
         let len = this.getVInt();
+        if (len < 0 || this.index + len > this.buffer.length)
+            throw "JSOBin Decode: Wrong format";
         let str = textDecoder.decode(this.buffer.subarray(this.index, this.index + len));
         this.index += len;
         return str;
@@ -642,6 +698,8 @@ class Decoder
             case 4: { // 对象
                 let ret = {};
                 let childCount = this.getVInt();
+                if (childCount < 0)
+                    throw "JSOBin Decode: Wrong format";
                 this.referenceIndList.push(ret);
                 for (let i = 0; i < childCount; i++)
                 {
@@ -666,9 +724,11 @@ class Decoder
                 if (classConstructor == undefined)
                     throw `JSOBin Decode: (class) "${className}" is unregistered class in the current context in the parsing jsobin`;
                 if (classConstructor?.[deserializationFunctionSymbol]) // 存在自定义反序列化函数
-                { // TODO 类的自定义处理需要大改版 目前无法在自定义序列化下使用循环引用
+                {
                     let dataObj = {};
                     let childCount = this.getVInt();
+                    if (childCount < 0)
+                        throw "JSOBin Decode: Wrong format";
                     let refInd = this.referenceIndList.length;
                     this.referenceIndList.push(dataObj);
                     for (let i = 0; i < childCount; i++)
@@ -684,6 +744,8 @@ class Decoder
                 {
                     let ret = Object.create(classConstructor.prototype);
                     let childCount = this.getVInt();
+                    if (childCount < 0)
+                        throw "JSOBin Decode: Wrong format";
                     this.referenceIndList.push(ret);
                     for (let i = 0; i < childCount; i++)
                     {
@@ -736,6 +798,8 @@ class Decoder
 
             case 14: { // 引用
                 let referenceInd = this.getVInt();
+                if (referenceInd < 0 || referenceInd >= this.referenceIndList.length)
+                    throw "JSOBin Decode: Wrong format";
                 let ret = this.referenceIndList[referenceInd];
                 this.referenceIndList.push(ret);
                 return ret;
@@ -756,8 +820,18 @@ class Decoder
 
             case 17: { // 安全函数
                 let func = this.#state.nameToSafetyFunction.get(this.getStr());
+                if (!func)
+                    throw "JSOBin Decode: A non-existent security function was used";
                 this.referenceIndList.push(func);
                 return func;
+            }
+
+            case 18: { // 命名的symbol
+                let symbol = this.#state.nameToNamedSymbol.get(this.getStr());
+                if (!symbol)
+                    throw "JSOBin Decode: A non-existent named symbol was used";
+                this.referenceIndList.push(symbol);
+                return symbol;
             }
 
             default:
@@ -781,8 +855,13 @@ class Decoder
      */
     readBigInt(len)
     {
+        if (len < 0)
+            throw "JSOBin Decode: Wrong format";
         let ret = 0n;
-        for (let ptr = this.index + len - 1; ptr >= this.index; ptr--)
+        let endPtr = this.index + len - 1;
+        if (this.index >= this.buffer.length)
+            throw "JSOBin Decode: Wrong format";
+        for (let ptr = endPtr; ptr >= this.index; ptr--)
         {
             ret <<= 8n;
             ret += BigInt(this.buffer[ptr]);
@@ -827,6 +906,18 @@ class JSOBin
     }
 
     /**
+     * 添加命名的symbol
+     * 允许确保通过此symbol的标识符和symbol的相互映射
+     * @param {string} identifier symbol的名称(标识符)
+     * @param {symbol} namedSymbol
+     */
+    addNamedSymbol(identifier, namedSymbol)
+    {
+        this.#state.nameToNamedSymbol.set(identifier, namedSymbol);
+        this.#state.namedSymbolToName.set(namedSymbol, identifier);
+    }
+
+    /**
      * 编码
      * @param {object | number | string} obj
      * @param {{
@@ -834,7 +925,7 @@ class JSOBin
      * }} [config]
      * @returns {Uint8Array}
      */
-    encode(obj, config)
+    encode(obj, config = {})
     {
         config = Object.assign({
             referenceString: false

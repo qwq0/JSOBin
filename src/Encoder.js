@@ -180,7 +180,7 @@ export class Encoder
                     this.push(0);
                 }
                 else if (this.#state.classToName.has(Object.getPrototypeOf(now)?.constructor)) // 类(自定义类)
-                { // TODO 类的自定义处理需要大改版 目前无法在自定义序列化下使用循环引用
+                {
                     this.push(6);
                     this.pushStr(this.#state.classToName.get(Object.getPrototypeOf(now)?.constructor));
                     let obj = now[serializationFunctionSymbol] ? now[serializationFunctionSymbol].call(now) : now; // 处理自定义序列化函数
@@ -249,6 +249,11 @@ export class Encoder
                 {
                     this.push(14);
                     this.pushVint(this.#referenceIndMap.get(now));
+                }
+                else if(this.#state.namedSymbolToName.has(now)) // 命名的symbol
+                {
+                    this.push(18);
+                    this.pushStr(this.#state.namedSymbolToName.get(now));
                 }
                 else // 新的symbol
                 {

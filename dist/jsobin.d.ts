@@ -17,6 +17,13 @@ declare class JSOBin {
      */
     addSafetyFunction(identifier: string, safetyFunction: Function): void;
     /**
+     * 添加命名的symbol
+     * 允许确保通过此symbol的标识符和symbol的相互映射
+     * @param {string} identifier symbol的名称(标识符)
+     * @param {symbol} namedSymbol
+     */
+    addNamedSymbol(identifier: string, namedSymbol: symbol): void;
+    /**
      * 编码
      * @param {object | number | string} obj
      * @param {{

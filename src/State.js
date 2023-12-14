@@ -34,4 +34,20 @@ export class State
      * @type {Map<function, string>}
      */
     safetyFunctionToName = new Map();
+
+    /**
+     * 命名的symbol映射
+     * 命名的symbol字符串标识 到 函数
+     * @package
+     * @type {Map<string, symbol>}
+     */
+    nameToNamedSymbol = new Map();
+
+    /**
+     * 命名的symbol映射
+     * 函数 到 命名的symbol字符串标识
+     * @package
+     * @type {Map<symbol, string>}
+     */
+    namedSymbolToName = new Map();
 }

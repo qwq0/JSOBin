@@ -35,6 +35,8 @@ const builtInClassTypeIdMap = new Map();
         {
             let ret = new Map();
             let childCount = decoder.getVInt();
+            if (childCount < 0)
+                throw "JSOBin Decode: Wrong format";
             decoder.referenceIndList.push(ret);
             for (let i = 0; i < childCount; i++)
             {
@@ -76,9 +78,8 @@ const builtInClassTypeIdMap = new Map();
         decode: (/** @type {Decoder} */decoder) =>
         {
             let length = decoder.getVInt();
-            let ret = decoder.buffer.buffer.slice(decoder.index, decoder.index + length);
+            let ret = decoder.getArr(length).buffer;
             decoder.referenceIndList.push(ret);
-            decoder.index += length;
             return ret;
         }
     },
@@ -94,43 +95,53 @@ const builtInClassTypeIdMap = new Map();
 ([
     {
         constructor: Int8Array,
-        typeId: 10
+        typeId: 10,
+        byteFactor: 1
     },
     {
         constructor: Uint8Array,
-        typeId: 11
+        typeId: 11,
+        byteFactor: 1
     },
     {
         constructor: Int16Array,
-        typeId: 12
+        typeId: 12,
+        byteFactor: 2
     },
     {
         constructor: Uint16Array,
-        typeId: 13
+        typeId: 13,
+        byteFactor: 2
     },
     {
         constructor: Int32Array,
-        typeId: 14
+        typeId: 14,
+        byteFactor: 4
     },
     {
         constructor: Uint32Array,
-        typeId: 15
+        typeId: 15,
+        byteFactor: 4
     },
     {
         constructor: BigInt64Array,
-        typeId: 16
+        typeId: 16,
+        byteFactor: 8
     },
     {
         constructor: BigUint64Array,
-        typeId: 17
+        typeId: 17,
+        byteFactor: 8
     },
     {
         constructor: Float32Array,
-        typeId: 18
+        typeId: 18,
+        byteFactor: 4
     },
     {
         constructor: Float64Array,
-        typeId: 19
+        typeId: 19,
+        byteFactor: 8
     }
 ]).forEach(o =>
 {
@@ -153,7 +164,11 @@ const builtInClassTypeIdMap = new Map();
 
         let byteOffset = decode.getVInt();
         let length = decode.getVInt();
+        if (length < 0 || byteOffset < 0)
+            throw "JSOBin Decode: Wrong format";
         let buffer = decode.traversal();
+        if (!(buffer instanceof ArrayBuffer) || byteOffset + o.byteFactor * length > buffer.byteLength)
+            throw "JSOBin Decode: Wrong format";
 
         let ret = new o.constructor(buffer, byteOffset, length);
         decode.referenceIndList[refInd] = ret;

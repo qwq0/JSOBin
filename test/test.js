@@ -53,6 +53,8 @@ class TestClassWithCustomSerializationFunction
     let jsob = new JSOBin();
     jsob.addClass("TestClass", TestClass);
     jsob.addClass("TestClassWithCustomSerializationFunction", TestClassWithCustomSerializationFunction);
+    let namedSymbol = Symbol("testSymbol123");
+    jsob.addNamedSymbol("testSymbol", namedSymbol);
 
     let srcObj = {
         number: {
@@ -124,7 +126,8 @@ class TestClassWithCustomSerializationFunction
             bigInt64Array: new BigInt64Array([19n, 20n, 21n]),
             bigUint64Array: new BigUint64Array([22n, 23n, 24n]),
             float32Array: new Float32Array([25, 26, 27]),
-            float64Array: new Float64Array([28, 29, 30])
+            float64Array: new Float64Array([28, 29, 30]),
+            namedSymbol: namedSymbol
         }
     };
     srcObj.cycle = srcObj;
@@ -139,5 +142,6 @@ class TestClassWithCustomSerializationFunction
         let assert = await import("assert");
         // @ts-ignore
         assert.deepStrictEqual(srcObj, targetObj, "deepEqual");
+        console.log("Done.");
     }
 })();
