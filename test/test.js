@@ -74,7 +74,9 @@ class TestClassWithCustomSerializationFunction
             n: -1n,
             o: 0n,
             p: 1234567890987654321n,
-            q: -1234567890987654321n
+            q: -1234567890987654321n,
+            r: -0,
+            s: NaN
         },
         string: "Hello JSOBin!",
         anotherString: "Hi JSOBin!",

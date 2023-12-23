@@ -130,7 +130,7 @@ export class Encoder
         switch (typeof (now))
         {
             case "number": { // 数值型(整数或小数)
-                if (Number.isInteger(now) && now >= -2147483648 && now <= 2147483647) // 整数
+                if (Number.isInteger(now) && now >= -2147483648 && now <= 2147483647 && !Object.is(now, -0)) // 32位整数
                 {
                     this.push(1);
                     this.pushVint(now);
@@ -250,7 +250,7 @@ export class Encoder
                     this.push(14);
                     this.pushVint(this.#referenceIndMap.get(now));
                 }
-                else if(this.#state.namedSymbolToName.has(now)) // 命名的symbol
+                else if (this.#state.namedSymbolToName.has(now)) // 命名的symbol
                 {
                     this.push(18);
                     this.pushStr(this.#state.namedSymbolToName.get(now));
