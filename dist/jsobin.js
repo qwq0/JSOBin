@@ -704,7 +704,17 @@ class Decoder
                 for (let i = 0; i < childCount; i++)
                 {
                     let key = this.getStr();
-                    ret[key] = this.traversal();
+                    let value = this.traversal();
+                    Object.defineProperty(
+                        ret,
+                        key,
+                        {
+                            value: value,
+                            writable: true,
+                            configurable: true,
+                            enumerable: true
+                        }
+                    );
                 }
                 return ret;
             }
@@ -734,7 +744,17 @@ class Decoder
                     for (let i = 0; i < childCount; i++)
                     {
                         let key = this.getStr();
-                        dataObj[key] = this.traversal();
+                        let value = this.traversal();
+                        Object.defineProperty(
+                            dataObj,
+                            key,
+                            {
+                                value: value,
+                                writable: true,
+                                configurable: true,
+                                enumerable: true
+                            }
+                        );
                     }
                     let ret = classConstructor[deserializationFunctionSymbol](dataObj);
                     this.referenceIndList[refInd] = ret;
@@ -750,7 +770,17 @@ class Decoder
                     for (let i = 0; i < childCount; i++)
                     {
                         let key = this.getStr();
-                        ret[key] = this.traversal();
+                        let value = this.traversal();
+                        Object.defineProperty(
+                            ret,
+                            key,
+                            {
+                                value: value,
+                                writable: true,
+                                configurable: true,
+                                enumerable: true
+                            }
+                        );
                     }
                     return ret;
                 }
