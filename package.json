@@ -1,6 +1,6 @@
 {
     "name": "jsobin",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "description": "",
     "main": "./dist/jsobin.js",
     "types": "./dist/jsobin.d.ts",
@@ -17,5 +17,10 @@
     "keywords": [
         "json",
         "serialization"
-    ]
+    ],
+    "devDependencies": {
+        "rollup": "^4.14.0",
+        "rollup-plugin-dts": "^6.1.0",
+        "typescript": "^5.4.4"
+    }
 }
