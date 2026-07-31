@@ -136,14 +136,27 @@ class TestClassWithCustomSerializationFunction
     srcObj.directedAcyclic = srcObj.array[0];
     console.log("srcObj", srcObj);
 
-    let targetObj = jsob.decode(jsob.encode(srcObj, { referenceString: true }));
+
+    let jsobContent = jsob.encode(srcObj, { referenceString: true });
+
+    let targetObj = jsob.decode(jsobContent);
     console.log("targetObj", targetObj);
 
     if (!globalThis["window"])
     {
         let assert = await import("assert");
-        // @ts-ignore
-        assert.deepStrictEqual(srcObj, targetObj, "deepEqual");
+        try
+        {
+            // @ts-ignore
+            assert.deepStrictEqual(srcObj, targetObj, "deepEqual");
+        }
+        catch (err)
+        {
+            console.error(err);
+            console.error("Test not pass.");
+            return;
+        }
+        console.log("jsobContent size", jsobContent.byteLength);
         console.log("Done.");
     }
 })();

@@ -1,5 +1,6 @@
 # JSOBin
-JSOBin是一个用于序列化javascript对象的规范和实现   
+JSOBin 是一个用于以二进制格式序列化javascript对象的规范和实现   
+对比 JSON 拥有更多功能 更小的体积
 
 + 优点 对比JSON
     + 更小

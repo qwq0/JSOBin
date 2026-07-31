@@ -118,6 +118,9 @@ export class Encoder
         this.pushArr(strBin);
     }
 
+
+    // TODO 优化编码器性能
+
     /**
      * 遍历编码
      * @param {object | number | string} now
@@ -132,8 +135,17 @@ export class Encoder
             case "number": { // 数值型(整数或小数)
                 if (Number.isInteger(now) && now >= -2147483648 && now <= 2147483647 && !Object.is(now, -0)) // 32位整数
                 {
-                    this.push(1);
-                    this.pushVint(now);
+                    // 区分是否是可以按位取反压缩的数
+                    if ((now & (-0x10000000)) !== (-0x10000000)) // 等效于int32下0xf0000000
+                    {
+                        this.push(1);
+                        this.pushVint(now);
+                    }
+                    else
+                    {
+                        this.push(19);
+                        this.pushVint(~now);
+                    }
                 }
                 else // 浮点数
                 {
@@ -173,10 +185,10 @@ export class Encoder
                 else if (Array.isArray(now)) // 数组
                 {
                     this.push(5);
-                    now.forEach(o =>
+                    for (let i = 0, length = now.length; i < length; i++)
                     {
-                        this.traversal(o);
-                    });
+                        this.traversal(now[i]);
+                    }
                     this.push(0);
                 }
                 else if (this.#state.classToName.has(Object.getPrototypeOf(now)?.constructor)) // 类(自定义类)

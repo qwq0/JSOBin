@@ -9,6 +9,7 @@ setInterval(() =>
 {
     console.log(` --- loop ${loopCount++} --- `);
     let srcObj = {
+        test: "hi",
         floatArray: (() =>
         {
             let ret = [];
@@ -78,17 +79,17 @@ setInterval(() =>
     const textDecoder = new TextDecoder("utf-8");
 
     console.time("JSON stringify and utf-8 encode");
-    console.time("JSON stringify");
+    // console.time("JSON stringify");
     let json = JSON.stringify(srcObj);
-    console.timeEnd("JSON stringify");
+    // console.timeEnd("JSON stringify");
     let jsonBuf = textEncoder.encode(json);
     console.timeEnd("JSON stringify and utf-8 encode");
 
     console.time("JSON parse and utf-8 decode");
     let jsonStr = textDecoder.decode(jsonBuf);
-    console.time("JSON parse");
+    // console.time("JSON parse");
     let jsonParsed = JSON.parse(jsonStr);
-    console.timeEnd("JSON parse");
+    // console.timeEnd("JSON parse");
     console.timeEnd("JSON parse and utf-8 decode");
 
 

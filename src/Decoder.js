@@ -316,6 +316,12 @@ export class Decoder
                 return symbol;
             }
 
+            case 19: { // 取反32位整数
+                let num = ~(this.getVInt());
+                this.referenceIndList.push(num);
+                return num;
+            }
+
             default:
                 throw "JSOBin Decode: Wrong format";
         }

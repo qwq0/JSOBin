@@ -1,0 +1,8 @@
+dist/types/
+node_modules/
+yarn.lock
+package-lock.json
+
+.vscode/
+/test/
+/src/
